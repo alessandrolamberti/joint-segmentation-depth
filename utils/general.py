@@ -1,6 +1,7 @@
 from torch.autograd import Variable
 import torch
 import numpy as np
+import cv2
 
 def preprocess_image(image, cuda):
     IMG_SCALE  = 1./255
@@ -12,3 +13,15 @@ def preprocess_image(image, cuda):
     if cuda:
         img_var = img_var.cuda()
     return img_var
+
+def postprocess_images(images, nc, cmap):
+    img, segm, depth = images
+    segm = cv2.resize(segm[0, :nc].cpu().data.numpy().transpose(1, 2, 0),
+                    img.shape[:2][::-1],
+                    interpolation=cv2.INTER_CUBIC)
+    depth = cv2.resize(depth[0, 0].cpu().data.numpy(),
+                    img.shape[:2][::-1],
+                    interpolation=cv2.INTER_CUBIC)
+    segm = cmap[segm.argmax(axis=2)].astype(np.uint8)
+    depth = np.abs(depth)
+    return segm, depth
