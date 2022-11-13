@@ -13,7 +13,11 @@ class Hydranet(nn.Module):
 
         self.define_mobilenet() # define the MobileNet backbone
         self.define_lightweight_refinenet() # define the Light-Weight RefineNet
-    
+        self.load_weights(path='data/hydranets-data/hydranets-data/ExpKITTI_joint.ckpt')
+        self.eval()
+
+        if torch.cuda.is_available():
+            self.cuda()
 
     def define_mobilenet(self):
         mobilenet_config = [[1, 16, 1, 1], # expansion rate, output channels, number of repeats, stride
@@ -109,14 +113,16 @@ class Hydranet(nn.Module):
 
         return out_segm, out_d
 
+    def load_weights(self, path):
+        ckpt = torch.load(path)
+        self.load_state_dict(ckpt['state_dict'])
 
-if __name__ == '__main__':
-    net = Hydranet()
-    print(net)
-    x = torch.randn(1, 3, 512, 512)
-    y = net(x)
-    print(y[0].shape)
-    print(y[1].shape)
+    @torch.no_grad()
+    def pipeline(self, image):
+        mask, depth = self.forward(image)
+
+        return mask, depth
+
 
 
     
