@@ -4,6 +4,9 @@ The following is an implementation of the paper [Real Time Joint Semantic Segmen
 ![](assets/architecture.png)
 
 ## Introduction
+According to the classical multi-task learning paradigm, forcing a single model to perform several related tasks simultaneously can improve generalisation via imposing an inductive bias on the learned representations.
+
+In this repository, the related tasks are semantic segmentation and depth estimation. The aim is to demonstrate that there is no need to uncritically deploy multiple expensive models, when the same performance can be achieved with one small network.
 
 
 ## Dataset
