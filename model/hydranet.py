@@ -1,33 +1,30 @@
+import cv2
+import numpy as np
 import torch
 from torch import nn
+from torch.autograd import Variable
 
 from model.utils import (CRPBlock, InvertedResidualBlock, batchnorm, conv1x1,
-                   conv3x3, convbnrelu)
-
+                         conv3x3, convbnrelu)
+from utils.general import timeit
+import logging
 
 class Hydranet(nn.Module):
 
-    def __init__(self):        
+    def __init__(self, cfg):        
         super().__init__()
-        self.num_classes = 6
+        self.cfg = cfg
+        self.num_classes = self.cfg['model']['num_classes']
 
         self.define_mobilenet() # define the MobileNet backbone
         self.define_lightweight_refinenet() # define the Light-Weight RefineNet
-        self.load_weights(path='data/hydranets-data/hydranets-data/ExpKITTI_joint.ckpt')
-        self.eval()
-
-        if torch.cuda.is_available():
-            self.cuda()
+        self.load_weights(path=self.cfg['model']['weights'])
+        self.eval().to(self.cfg['model']['device'])
+        self.warmup()
+        logging.info('Model loaded on {}'.format(self.cfg['model']['device']))
 
     def define_mobilenet(self):
-        mobilenet_config = [[1, 16, 1, 1], # expansion rate, output channels, number of repeats, stride
-                        [6, 24, 2, 2],
-                        [6, 32, 3, 2],
-                        [6, 64, 4, 2],
-                        [6, 96, 3, 1],
-                        [6, 160, 3, 2],
-                        [6, 320, 1, 1],
-                        ]
+        mobilenet_config = self.cfg['model']['encoder_config']
         self.in_channels = 32 # input channels
         self.layer1 = convbnrelu(3, self.in_channels, kernel_size=3, stride=2)
         c_layer = 2
@@ -66,6 +63,13 @@ class Hydranet(nn.Module):
         self.segm = conv3x3(256, self.num_classes, bias=True)
         self.relu = nn.ReLU6(inplace=True)
 
+    def warmup(self):
+        if torch.cuda.is_available() and self.cfg['model']['device'] == 'cuda':
+            logging.info('Warming up the GPU...')
+            img = torch.randn(1, 3, 224, 224).cuda()
+            self.forward(img)
+
+    @timeit
     def forward(self, x):
         # MOBILENET V2
         x = self.layer1(x)
@@ -117,11 +121,35 @@ class Hydranet(nn.Module):
         ckpt = torch.load(path)
         self.load_state_dict(ckpt['state_dict'])
 
-    @torch.no_grad()
-    def pipeline(self, image):
-        mask, depth = self.forward(image)
+    def preprocess_image(self, image):
+        IMG_MEAN = np.array(self.cfg['preprocessing']['img_mean']).reshape((1, 1, 3))
+        IMG_STD = np.array(self.cfg['preprocessing']['img_std']).reshape((1, 1, 3))
 
-        return mask, depth
+        img = (image * 1./255 - IMG_MEAN) / IMG_STD
+        img_var = Variable(torch.from_numpy(img.transpose(2, 0, 1)[None]), requires_grad=False).float()
+        if torch.cuda.is_available() and self.cfg['model']['device'] == 'cuda':
+            img_var = img_var.cuda()
+        return img_var
+
+    def postprocess_images(self, orig, segm, depth):
+        segm = cv2.resize(segm[0, :self.num_classes].cpu().data.numpy().transpose(1, 2, 0),
+                        orig.shape[:2][::-1],
+                        interpolation=cv2.INTER_CUBIC)
+        depth = cv2.resize(depth[0, 0].cpu().data.numpy(),
+                        orig.shape[:2][::-1],
+                        interpolation=cv2.INTER_CUBIC)
+
+        cmap = np.load(self.cfg['general']['cmap'])
+        segm = cmap[segm.argmax(axis=2)].astype(np.uint8)
+        depth = np.abs(depth)
+        return segm, depth
+
+    def pipeline(self, image):
+        img_var = self.preprocess_image(image)
+        with torch.no_grad():
+            mask, depth = self.forward(img_var)
+
+        return self.postprocess_images(image, mask, depth)
 
 
 

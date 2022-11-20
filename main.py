@@ -6,27 +6,26 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from PIL import Image
+import logging
 
 from model import Hydranet
-from utils import plot_results, preprocess_image, postprocess_images
+from utils import plot_results, load_config
 
 if __name__ == '__main__':
-    hydranet = Hydranet()
 
-    CMAP = np.load('data/hydranets-data/hydranets-data/cmap_kitti.npy')
-    NUM_CLASSES = 6
+    logging.basicConfig(format='%(asctime)s - %(message)s')
+    logging.getLogger().setLevel(logging.INFO)
+    
+    cfg = load_config('config/cfg.yaml')
 
-    images_files = glob.glob('data/residential/*.png')
+    hydranet = Hydranet(cfg)
+
+    images_files = glob.glob(cfg['general']['input_dir'] + cfg['general']['environment'] + '/*.png')
     idx = np.random.randint(0, len(images_files))
 
     img_path = images_files[idx]
     img = np.array(Image.open(img_path))
 
-    def inference(img):
-            img_var = preprocess_image(img, cuda=True)
-            mask, depth = hydranet.pipeline(img_var)
-            mask, depth = postprocess_images((img, mask, depth), NUM_CLASSES, CMAP)
-            return mask, depth
+    mask, depth = hydranet.pipeline(img)
 
-    mask, depth = inference(img)
     plot_results(img, depth, mask, mask)
