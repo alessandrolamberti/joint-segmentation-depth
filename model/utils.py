@@ -46,7 +46,10 @@ class InvertedResidualBlock(nn.Module):
 
 
 class CRPBlock(nn.Module):
-    """CRP definition"""
+    """
+    Contextual block, called Chained Residual Pooling, 
+    consisting of a series of 5x5 max-pooling and
+    1x1 convolutions """
     def __init__(self, in_planes, out_planes, n_stages, groups=False):
         super().__init__()
         for i in range(n_stages):
