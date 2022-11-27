@@ -1,10 +1,8 @@
-from functools import wraps
-import time
 import logging
+import time
+from functools import wraps
+
 import yaml
-
-logging.basicConfig(format='%(asctime)s - %(message)s')
-
 
 def timeit(func):
     @wraps(func)

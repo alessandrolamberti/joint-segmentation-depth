@@ -1,3 +1,5 @@
+import logging
+
 import cv2
 import numpy as np
 import torch
@@ -7,7 +9,7 @@ from torch.autograd import Variable
 from model.utils import (CRPBlock, InvertedResidualBlock, batchnorm, conv1x1,
                          conv3x3, convbnrelu)
 from utils.general import timeit
-import logging
+
 
 class Hydranet(nn.Module):
 
@@ -21,7 +23,7 @@ class Hydranet(nn.Module):
         self.load_weights(path=self.cfg['model']['weights'])
         self.eval().to(self.cfg['model']['device'])
         self.warmup()
-        logging.info('Model loaded on {}'.format(self.cfg['model']['device']))
+        logging.info('Model loaded on device: {}'.format(self.cfg['model']['device']))
 
     def define_mobilenet(self):
         mobilenet_config = self.cfg['model']['encoder_config']
@@ -65,11 +67,9 @@ class Hydranet(nn.Module):
 
     def warmup(self):
         if torch.cuda.is_available() and self.cfg['model']['device'] == 'cuda':
-            logging.info('Warming up the GPU...')
             img = torch.randn(1, 3, 224, 224).cuda()
             self.forward(img)
 
-    @timeit
     def forward(self, x):
         # MOBILENET V2
         x = self.layer1(x)
@@ -144,6 +144,7 @@ class Hydranet(nn.Module):
         depth = np.abs(depth)
         return segm, depth
 
+    @timeit
     def pipeline(self, image):
         img_var = self.preprocess_image(image)
         with torch.no_grad():

@@ -1,4 +1,5 @@
 import glob
+import logging
 import math
 
 import cv2
@@ -6,10 +7,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from PIL import Image
-import logging
 
 from model import Hydranet
-from utils import plot_results, load_config
+from utils import load_config, plot_results
 
 if __name__ == '__main__':
 
