@@ -1,11 +1,7 @@
 import glob
 import logging
-import math
 
-import cv2
-import matplotlib.pyplot as plt
 import numpy as np
-import torch
 from PIL import Image
 
 from model import Hydranet
