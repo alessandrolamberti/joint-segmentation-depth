@@ -24,4 +24,4 @@ if __name__ == '__main__':
 
     mask, depth = hydranet.pipeline(img)
 
-    plot_results(img, depth, mask, mask)
+    plot_results(img, depth, mask)

@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_results(img, depth, mask, segmented):
+def plot_results(img, depth, mask):
     # overlay segmentation on top of the image
     segmented = (mask * 0.5 + img * 0.5).astype(np.uint8)
 
